@@ -1,0 +1,8 @@
+parameter,value
+package_name,org.apache.commons:commons-lang3
+repository,https://repo.maven.apache.org/maven2
+test_mode,false
+version,3.14.0
+output_file,graph.png
+ascii_tree,true
+filter_substring,test
