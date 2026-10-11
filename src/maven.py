@@ -1,5 +1,6 @@
 """Получение прямых зависимостей Maven-пакета из репозитория."""
 
+import functools
 import re
 import urllib.error
 import urllib.request
@@ -7,10 +8,11 @@ from dataclasses import replace
 
 from src.pom import Coordinates, MavenError, parse_pom
 
-TIMEOUT_SECONDS = 15
+TIMEOUT_SECONDS = 60
 HTTP_NOT_FOUND = 404
 MAX_PARENT_DEPTH = 10
 MAX_SUBSTITUTIONS = 10
+CACHE_SIZE = 256
 PLACEHOLDER = re.compile(r"\$\{([^}]+)\}")
 
 def make_coordinates(package_name, version):
@@ -26,6 +28,7 @@ def pom_url(repository, coords):
              coords.version, name]
     return "/".join(parts)
 
+@functools.lru_cache(maxsize=CACHE_SIZE)
 def fetch_bytes(url):
     """Скачать файл по URL и вернуть его содержимое."""
     try:
