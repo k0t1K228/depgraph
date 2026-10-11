@@ -13,6 +13,7 @@ HTTP_NOT_FOUND = 404
 MAX_PARENT_DEPTH = 10
 MAX_SUBSTITUTIONS = 10
 CACHE_SIZE = 256
+PROJECT_PREFIXES = ("project", "pom")
 PLACEHOLDER = re.compile(r"\$\{([^}]+)\}")
 
 def make_coordinates(package_name, version):
@@ -59,9 +60,10 @@ def merge_properties(chain):
     for pom in reversed(chain):
         merged.update(pom.properties)
     own = chain[0].coordinates
-    merged["project.version"] = own.version
-    merged["project.groupId"] = own.group
-    merged["project.artifactId"] = own.artifact
+    for prefix in PROJECT_PREFIXES:
+        merged[f"{prefix}.version"] = own.version
+        merged[f"{prefix}.groupId"] = own.group
+        merged[f"{prefix}.artifactId"] = own.artifact
     return merged
 
 def merge_managed(chain):
