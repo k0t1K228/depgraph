@@ -3,6 +3,6 @@ package_name,com.google.inject:guice
 repository,https://repo.maven.apache.org/maven2
 test_mode,false
 version,5.1.0
-output_file,graph.png
+output_file,examples/guice.png
 ascii_tree,true
 filter_substring,
