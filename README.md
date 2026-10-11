@@ -155,3 +155,112 @@ filter_substring,
     org.objenesis:objenesis:3.3 -> (нет)
     net.sf.jopt-simple:jopt-simple:5.0.4 -> (нет)
     org.apache.commons:commons-math3:3.6.1 -> (нет)
+### Сравнение с Apache Maven
+
+Для сравнения создавались проверочные проекты, зависящие от
+анализируемого пакета (guava 32.1.3-jre и guice 5.1.0). Порядок
+классов Maven получен командой `mvn dependency:build-classpath`, состав
+и структура зависимостей командой `mvn dependency:tree`.
+
+Результаты:
+
+- Для guava состав пакетов совпал с Maven полностью (7 пакетов),
+  различается только порядок.
+- Версии всех общих пакетов у guice совпали с Maven (guava 30.1-jre,
+  checker-qual 3.5.0, error_prone_annotations 2.3.4 и другие), то есть
+  разрешение свойств, родительских pom и конфликтов версий работает так
+  же, как в Maven.
+- Для guice у нас 21 пакет, у Maven 10. Расхождения объяснены ниже.
+
+Расхождения и их причины:
+
+1. Порядок. Maven перечисляет пакет раньше его зависимостей (порядок
+   обхода дерева зависимостей), а наш порядок топологический:
+   зависимости стоят раньше потребителей, анализируемый пакет последний.
+   Для независимых зависимостей порядок объявления сохраняется.
+2. Состав для guice. Лишние 11 пакетов происходят от зависимостей самого
+   guice, которые Maven не наследует: asm (область `optional`),
+   javax.inject-tck, guava-testlib, bnd, org.apache.felix.framework и
+   truth (область `test`), а также от их транзитивных зависимостей
+   (junit, hamcrest-core, diffutils, auto-value-annotations,
+   checker-compat-qual). Наш инструмент рассматривает анализируемый пакет
+   как собственный проект и учитывает все области видимости его
+   зависимостей, а в проверочном проекте Maven эти зависимости пакета не
+   наследуются.
+3. Не поддерживаются BOM-импорт, `exclusions` и диапазоны версий, из-за
+   чего набор пакетов у некоторых артефактов может отличаться.
+
+Результаты Maven и нашего инструмента для сравнения.
+
+Maven (`build-classpath`), пакет com.google.guava:guava:32.1.3-jre:
+
+    guava-32.1.3-jre.jar
+    failureaccess-1.0.1.jar
+    listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar
+    jsr305-3.0.2.jar
+    checker-qual-3.37.0.jar
+    error_prone_annotations-2.21.1.jar
+    j2objc-annotations-2.8.jar
+
+Maven (`dependency:tree`), тот же пакет:
+
+    check:check:jar:1.0
+    \- com.google.guava:guava:jar:32.1.3-jre:compile
+       +- com.google.guava:failureaccess:jar:1.0.1:compile
+       +- com.google.guava:listenablefuture:jar:9999.0-empty-to-avoid-conflict-with-guava:compile
+       +- com.google.code.findbugs:jsr305:jar:3.0.2:compile
+       +- org.checkerframework:checker-qual:jar:3.37.0:compile
+       +- com.google.errorprone:error_prone_annotations:jar:2.21.1:compile
+       \- com.google.j2objc:j2objc-annotations:jar:2.8:compile
+
+Наш инструмент, пакет com.google.inject:guice:5.1.0 (`examples/guice.csv`):
+
+    Порядок загрузки зависимостей (пакетов: 21):
+    1. org.hamcrest:hamcrest-core:1.3
+    2. junit:junit:4.13
+    3. javax.inject:javax.inject:1
+    4. aopalliance:aopalliance:1.0
+    5. com.google.guava:failureaccess:1.0.1
+    6. com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
+    7. com.google.code.findbugs:jsr305:3.0.2
+    8. org.checkerframework:checker-qual:3.5.0
+    9. com.google.errorprone:error_prone_annotations:2.3.4
+    10. com.google.j2objc:j2objc-annotations:1.3
+    11. com.google.guava:guava:30.1-jre
+    12. org.ow2.asm:asm:9.2
+    13. javax.inject:javax.inject-tck:1
+    14. com.google.guava:guava-testlib:30.1-jre
+    15. biz.aQute:bnd:0.0.384
+    16. org.apache.felix:org.apache.felix.framework:3.0.5
+    17. org.checkerframework:checker-compat-qual:2.5.5
+    18. com.googlecode.java-diff-utils:diffutils:1.3.0
+    19. com.google.auto.value:auto-value-annotations:1.6.3
+    20. com.google.truth:truth:0.45
+    21. com.google.inject:guice:5.1.0
+
+Maven (`build-classpath`), пакет com.google.inject:guice:5.1.0:
+
+    guice-5.1.0.jar
+    javax.inject-1.jar
+    aopalliance-1.0.jar
+    guava-30.1-jre.jar
+    failureaccess-1.0.1.jar
+    listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar
+    jsr305-3.0.2.jar
+    checker-qual-3.5.0.jar
+    error_prone_annotations-2.3.4.jar
+    j2objc-annotations-1.3.jar
+
+Maven (`dependency:tree`), тот же пакет:
+
+    check:check:jar:1.0
+    \- com.google.inject:guice:jar:5.1.0:compile
+       +- javax.inject:javax.inject:jar:1:compile
+       +- aopalliance:aopalliance:jar:1.0:compile
+       \- com.google.guava:guava:jar:30.1-jre:compile
+          +- com.google.guava:failureaccess:jar:1.0.1:compile
+          +- com.google.guava:listenablefuture:jar:9999.0-empty-to-avoid-conflict-with-guava:compile
+          +- com.google.code.findbugs:jsr305:jar:3.0.2:compile
+          +- org.checkerframework:checker-qual:jar:3.5.0:compile
+          +- com.google.errorprone:error_prone_annotations:jar:2.3.4:compile
+          \- com.google.j2objc:j2objc-annotations:jar:1.3:compile
